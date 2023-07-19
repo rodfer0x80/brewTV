@@ -1,145 +1,162 @@
-package brewTV
+package main
 
 import (
-	"bufio"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
+	"text/template"
 )
 
-func updateRecords() int {
-	fmt.Println("Updated records")
-	return
-}
-
-func failedToUpdateRecordsWarning() {
-	fmt.Println("Failed to update records")
-	return
-}
-
-func getLibraryRecords() []string {
-	var records []string
-	return records
-}
-
-func getRecordSeasons() []string {
-	var seasons []string
-	return seasons
-}
-
-func getRecordSeasonEpisodes() []string {
-	var episodes []string
-	return episodes
-}
-
-func getEpisodePath(record string, season string, episode string) string {
-	var path string
-	return path
-}
-
-func playEpisode(record string, season string, episode string, path string) {
-	save := Save
-	save.record = record
-	save.season = season
-	save.episode = episode
-	save.timestamp = 0
-	fmt.Printf("Now playing: %s\n", path)
-	return
-}
-
-type State struct {
-	record  string
-	season  string
-	episode string
-	depth   int // 0 :: records; 1 :: seasons // 2 :: episodes
-}
-
-type Save struct {
-	record    string
-	season    string
-	episode   string
-	timestamp string
-}
+const moviesDir = "./movies"
+const host = "LOCAL" // INET // LOCAL
 
 func main() {
-	var records []string
-	var seasons []string
-	var record int
-	var season int
-	var episode int
-	var path string
+	config()
 
-	state := State
+	IP := "127.0.0.1"
+	port := "8080"
 
-	var cmd string
-	stdin := bufio.NewReader(os.Stdin)
-
-	if updateRecords() != nil {
-		failedToUpdateRecordsWarning()
+	if host == "LAN" {
+		IP := getLANIP()
+		port = "80"
+		fmt.Println("Server LAN IP:", IP+":"+port)
 	}
-	records = getRecords()
-
-	fmt.Println("<<<<<<<< brewTV >>>>>>>>")
-	for i := len(records) - 1; i >= 0; i-- {
-		fmt.Printf("%d - %s\n", i+1, records[i])
-	}
-	fmt.Printf(">>> ")
-	cmd, _ = stdin.ReadString('\n')
-	cmd = strings.Replace(cmd, "\n", "", -1)
-	record, err := strconv.Atoi(cmd)
-	if err != nil {
-		record = 0
+	if host == "INET" {
+		IP = "0.0.0.0"
+		port = "80"
+		fmt.Println("Server INET:", IP+":"+port)
 	}
 
-	if cmd == "0" || cmd == "exit" || cmd == "quit" || cmd == "q" || cmd == "x" {
-		os.Exit(0)
-	} else if record == 0 {
-		os.Exit(0)
-	} else if 0 < record && record <= len(records) {
-		record = record - 1
-		state.record = records[record]
-		seasons = getRecordSeasons(records[record])
-		fmt.Println("<<<<<<<< brewTV >>>>>>>>")
-		fmt.Println(records[record])
-		for i := len(seasons) - 1; i >= 0; i-- {
-			fmt.Printf("%d - %s\n", i+1, seasons[i])
-		}
-		fmt.Printf(">>> ")
-		cmd, _ = stdin.ReadString('\n')
-		cmd = strings.Replace(cmd, "\n", "", -1)
-		season, err := strconv.Atoi(cmd)
+	fmt.Println("Server LOCAL:", IP+":"+port)
+
+	http.HandleFunc("/", indexHandler)
+
+	http.HandleFunc("/movies/", streamMovieHandler)
+
+	http.ListenAndServe(IP+":"+port, nil)
+}
+
+func config() {
+	createDirIfNotExists(moviesDir)
+}
+
+func createDirIfNotExists(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err = os.MkdirAll(path, 0777)
 		if err != nil {
-			season = 0
-		}
-		if cmd == "0" || cmd == "exit" || cmd == "quit" || cmd == "q" || cmd == "x" {
-			// go back
-		} else if season == 0 {
-			// go back
-		} else if 0 < season && season <= len(seasons) {
-			season = season - 1
-			state.season = seasons[season]
-			episodes = getSeasonEpisodes(records[record], seasons[season])
-			fmt.Println("<<<<<<<< brewTV >>>>>>>>")
-			fmt.Println(seasons[season])
-			fmt.Printf(">>> ")
-			cmd, _ = stdin.ReadString('\n')
-			cmd = strings.Replace(cmd, "\n", "", -1)
-			episode, err := strconv.Atoi(cmd)
-			if err != nil {
-				episode = 0
-			}
-			if cmd == "0" || cmd == "exit" || cmd == "quit" || cmd == "q" || cmd == "x" {
-				// go back
-			} else if episode == 0 {
-				// go back
-			} else if 0 < episode && episode <= len(episodes) {
-				episode = episode - 1
-				state.episode = episodes[episode]
-				path = getEpisodePath(records[record], seasons[season], episodes[episode])
-				playEpisode(records[record], seasons[season], episodes[episode])
-			}
+			return err
 		}
 	}
-	return
+	return nil
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	movies, err := listMovies()
+	if err != nil {
+		http.Error(w, "Failed to list movies", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Cinema Movies</title>
+	</head>
+	<body>
+		<h1>Cinema Movies</h1>
+		<ul>
+			{{range .}}
+			<li><a href="/movies/{{.}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+	</body>
+	</html>
+	`
+
+	t := template.Must(template.New("index").Parse(tmpl))
+	err = t.Execute(w, movies)
+	if err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		return
+	}
+}
+
+func listMovies() ([]string, error) {
+	var movies []string
+
+	err := filepath.Walk(moviesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".mp4") {
+			relPath, err := filepath.Rel(moviesDir, path)
+			if err != nil {
+				return err
+			}
+			movies = append(movies, relPath)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return movies, nil
+}
+
+func getLANIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println("Failed to get local IP:", err)
+		os.Exit(1)
+	}
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			return ipnet.IP.String()
+		}
+	}
+
+	fmt.Println("Unable to determine LAN IP. Exiting...")
+	os.Exit(1)
+	return ""
+}
+
+func streamMovieHandler(w http.ResponseWriter, r *http.Request) {
+	moviePath := filepath.Join(moviesDir, filepath.Base(r.URL.Path))
+	if isFileExists(moviePath) {
+		serveVideo(w, r, moviePath)
+		return
+	}
+
+	http.NotFound(w, r)
+}
+
+func serveVideo(w http.ResponseWriter, r *http.Request, filePath string) {
+	movieFile, err := os.Open(filePath)
+	if err != nil {
+		http.Error(w, "Failed to open the movie file", http.StatusInternalServerError)
+		return
+	}
+	defer movieFile.Close()
+
+	w.Header().Set("Content-Type", "video/mp4")
+	_, err = io.Copy(w, movieFile)
+	if err != nil {
+		http.Error(w, "Failed to stream the movie", http.StatusInternalServerError)
+		return
+	}
+}
+
+func isFileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	return err == nil
 }
