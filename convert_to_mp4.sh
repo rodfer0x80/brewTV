@@ -22,3 +22,5 @@ for input_file in "$CWD"/*.mp3; do
         ffmpeg -i "$input_file" -c:v libx264 -c:a aac -strict experimental "$output_file"
     fi
 done
+
+rm -rf *.mkv *.mp3 *.webm
