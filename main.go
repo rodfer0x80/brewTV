@@ -8,12 +8,13 @@ import (
 	"text/template"
 )
 
+const DEBUG = 0
+
 const LIBRARY_PATH = "/opt/brewTV/library"
 const YTPL_PATH = "/opt/brewTV/ytpl"
 const ACCEPTED_VIDEO_FORMAT = "mp4"
 const VIDEO_PLAY_PARAMETER = "path"
 const YT_URL_TEMPLATE_URL = "https://www.youtube.com/watch?v="
-const DEBUG = 1
 
 func main() {
 	// Setup server interface and port
