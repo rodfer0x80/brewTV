@@ -2,46 +2,62 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 	"text/template"
 )
 
-const moviesDir = "./movies"
-const host = "LOCAL" // INET // LOCAL
+const LIBRARY_PATH = "/opt/brewTV/library"
+const YTPL_PATH = "/opt/brewTV/ytpl"
+const ACCEPTED_VIDEO_FORMAT = "mp4"
+const VIDEO_PLAY_PARAMETER = "path"
+const YT_URL_TEMPLATE_URL = "https://www.youtube.com/watch?v="
+const DEBUG = 1
 
 func main() {
-	config()
-
-	IP := "127.0.0.1"
-	port := "8080"
-
-	if host == "LAN" {
-		IP := getLANIP()
-		port = "80"
-		fmt.Println("Server LAN IP:", IP+":"+port)
+	// Setup server interface and port
+	tcpAddr := &net.TCPAddr{
+		IP:   net.ParseIP(getLANIP()),
+		Port: 80,
 	}
-	if host == "INET" {
-		IP = "0.0.0.0"
-		port = "80"
-		fmt.Println("Server INET:", IP+":"+port)
+	if DEBUG == 1 {
+		tcpAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 8080,
+		}
 	}
-
-	fmt.Println("Server LOCAL:", IP+":"+port)
-
+	// Setup working volumes
+	createDirIfNotExists(LIBRARY_PATH)
+	createDirIfNotExists(YTPL_PATH)
+	// Assign paths to handler functions
 	http.HandleFunc("/", indexHandler)
-
-	http.HandleFunc("/movies/", streamMovieHandler)
-
-	http.ListenAndServe(IP+":"+port, nil)
+	http.HandleFunc("/library", LibraryHandler)
+	http.HandleFunc("/library/play", LibraryPlayHandler)
+	http.HandleFunc("/ytpl", YTPLVideoHandler)
+	http.HandleFunc("/ytpl/play", YTPLPlayVideoHandler)
+	// Start server
+	fmt.Printf("Running server: %s\n", tcpAddr.String())
+	err := http.ListenAndServe(tcpAddr.String(), nil)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }
 
-func config() {
-	createDirIfNotExists(moviesDir)
+func getLANIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println("Failed to get local IP:", err)
+		os.Exit(1)
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			return ipnet.IP.String()
+		}
+	}
+	fmt.Println("Unable to determine LAN IP. Exiting...")
+	os.Exit(1)
+	return ""
 }
 
 func createDirIfNotExists(path string) error {
@@ -54,109 +70,72 @@ func createDirIfNotExists(path string) error {
 	return nil
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	movies, err := listMovies()
-	if err != nil {
-		http.Error(w, "Failed to list movies", http.StatusInternalServerError)
-		return
-	}
-
-	tmpl := `
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>Cinema Movies</title>
-	</head>
-	<body>
-		<h1>Cinema Movies</h1>
-		<ul>
-			{{range .}}
-			<li><a href="/movies/{{.}}">{{.}}</a></li>
-			{{end}}
-		</ul>
-	</body>
-	</html>
-	`
-
-	t := template.Must(template.New("index").Parse(tmpl))
-	err = t.Execute(w, movies)
-	if err != nil {
+func RenderTemplate(w http.ResponseWriter, name string, html string, data []string) {
+	if template.Must(template.New(name).Parse(html)).Execute(w, data) != nil {
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		return
 	}
 }
 
-func listMovies() ([]string, error) {
-	var movies []string
-
-	err := filepath.Walk(moviesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".mp4") {
-			relPath, err := filepath.Rel(moviesDir, path)
-			if err != nil {
-				return err
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	html := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>BrewTV</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #000;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
 			}
-			movies = append(movies, relPath)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return movies, nil
-}
-
-func getLANIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		fmt.Println("Failed to get local IP:", err)
-		os.Exit(1)
-	}
-
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
-			return ipnet.IP.String()
-		}
-	}
-
-	fmt.Println("Unable to determine LAN IP. Exiting...")
-	os.Exit(1)
-	return ""
-}
-
-func streamMovieHandler(w http.ResponseWriter, r *http.Request) {
-	moviePath := filepath.Join(moviesDir, filepath.Base(r.URL.Path))
-	if isFileExists(moviePath) {
-		serveVideo(w, r, moviePath)
-		return
-	}
-
-	http.NotFound(w, r)
-}
-
-func serveVideo(w http.ResponseWriter, r *http.Request, filePath string) {
-	movieFile, err := os.Open(filePath)
-	if err != nil {
-		http.Error(w, "Failed to open the movie file", http.StatusInternalServerError)
-		return
-	}
-	defer movieFile.Close()
-
-	w.Header().Set("Content-Type", "video/mp4")
-	_, err = io.Copy(w, movieFile)
-	if err != nil {
-		http.Error(w, "Failed to stream the movie", http.StatusInternalServerError)
-		return
-	}
-}
-
-func isFileExists(filePath string) bool {
-	_, err := os.Stat(filePath)
-	return err == nil
+			.container {
+				background-color: #1a1a1a;
+				border-radius: 8px;
+				padding: 20px;
+				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
+				width: 400px;
+				text-align: center;
+			}
+			h1 {
+				margin-top: 0;
+				color: #fff;
+			}
+			ul {
+				list-style: none;
+				padding: 0;
+				margin-top: 20px;
+			}
+			li {
+				margin-bottom: 10px;
+			}
+			a {
+				text-decoration: none;
+				color: #007bff;
+				font-weight: bold;
+				font-size: 18px; /* Adjust the font size */
+				margin-left: 10px; /* Add margin for spacing */
+			}
+			a:hover {
+				color: #0056b3;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>BrewTV</h1>
+			<ul>
+				<li><a href="/library">Library</a></li>
+				<li><a href="/ytpl">YouTube</a></li>
+			</ul>
+		</div>
+	</body>
+	</html>	
+	`
+	RenderTemplate(w, "index", html, make([]string, 0))
 }
