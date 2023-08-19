@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -43,15 +43,12 @@ func getVideoURL(conWrite http.ResponseWriter, request *http.Request) string {
 
 func cleanupDownload(videoPath string) {
 	os.Remove(videoPath)
-	// if err := os.Remove(videoPath); err != nil {
-	// fmt.Printf("Error deleting video file: %v\n", err)
-	// }
 }
 
 func streamVideo(conWrite http.ResponseWriter, videoPath string) {
 	videoFile, err := os.Open(videoPath)
 	if err != nil {
-		fmt.Printf("Error opening video file: %v\n", err)
+		log.Printf("Error opening video file: %v\n", err)
 	}
 	defer videoFile.Close()
 	conWrite.Header().Set("Content-Type", "video/mp4")
