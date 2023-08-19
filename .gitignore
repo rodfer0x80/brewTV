@@ -8,6 +8,12 @@
 *.so
 *.dylib
 
+# Log files
+*.log 
+./*.log
+brewTV.log
+./brewTV.log
+
 # Test binary, built with `go test -c`
 *.test
 

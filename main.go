@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -28,6 +28,13 @@ func main() {
 			Port: 8080,
 		}
 	}
+	// Start log
+	log_file, err := os.Create("brewTV.log")
+	if err != nil {
+		log.Fatal("Error creating log file:", err)
+	}
+	defer log_file.Close()
+	log.SetOutput(log_file)
 	// Setup working volumes
 	createDirIfNotExists(LIBRARY_PATH)
 	createDirIfNotExists(YTPL_PATH)
@@ -38,17 +45,17 @@ func main() {
 	http.HandleFunc("/ytpl", YTPLVideoHandler)
 	http.HandleFunc("/ytpl/play", YTPLPlayVideoHandler)
 	// Start server
-	fmt.Printf("Running server: %s\n", tcpAddr.String())
-	err := http.ListenAndServe(tcpAddr.String(), nil)
+	log.Printf("Running server: %s\n", tcpAddr.String())
+	err = http.ListenAndServe(tcpAddr.String(), nil)
 	if err != nil {
-		fmt.Println("Error starting server:", err)
+		log.Println("Error starting server:", err)
 	}
 }
 
 func getLANIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println("Failed to get local IP:", err)
+		log.Println("Failed to get local IP:", err)
 		os.Exit(1)
 	}
 	for _, addr := range addrs {
@@ -56,7 +63,7 @@ func getLANIP() string {
 			return ipnet.IP.String()
 		}
 	}
-	fmt.Println("Unable to determine LAN IP. Exiting...")
+	log.Println("Unable to determine LAN IP. Exiting...")
 	os.Exit(1)
 	return ""
 }
