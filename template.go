@@ -13,6 +13,7 @@ func renderTemplate(w http.ResponseWriter, name string, html string, data []stri
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
+	ScanMacAddress(r)
 	html := `
 	<!DOCTYPE html>
 	<html>

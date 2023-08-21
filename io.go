@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -10,7 +9,7 @@ import (
 
 func CreateFileIfNotExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_, err := os.Create(ALLOWED_MAC_ADDRESSES_PATH)
+		_, err := os.Create(path)
 		if err != nil {
 			return err
 		}
@@ -26,17 +25,6 @@ func CreateDirIfNotExists(path string) error {
 		}
 	}
 	return nil
-}
-
-func GetUserInput() string {
-	var user_input string
-	fmt.Print("\n>>> ")
-	_, err := fmt.Scanf("%s", &user_input)
-	if err != nil {
-		log.Println("[GetUserInputNumber]::", err)
-		os.Exit(3)
-	}
-	return user_input
 }
 
 func AppendToFile(path string, content string) error {

@@ -18,7 +18,6 @@ func StartServer() {
 			Port: 8080,
 		}
 	}
-	StartLogger()
 	loadConfig()
 	setupServer()
 	runServer(*tcp_addr)

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/netip"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/mdlayher/arp"
 )
@@ -73,31 +73,31 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func ScanLANMacAddresses() []net.HardwareAddr {
+func ScanMacAddress(r *http.Request) string {
 	if os.Geteuid() != 0 {
 		fmt.Println("[scanLANMacAddresses]::This program requires root privileges to access raw sockets.")
 		os.Exit(-1)
 	}
+
 	iface := getNetworkAdapterInterface()
 	c, err := arp.Dial(iface)
 	if err != nil {
 		log.Println("[scanLANMacAddresses]::Error creating ARP client:", err)
-		return nil
+		return ""
 	}
 	defer c.Close()
-	var macAddresses []net.HardwareAddr
-	addr, _ := netip.ParseAddr("192.168.0.1")
+
+	remoteIP := r.RemoteAddr
+	addr, _ := netip.ParseAddr(remoteIP)
 	s := addr.AsSlice()
 	ip := net.IP(s)
 	addrFromIp, _ := netip.AddrFromSlice(ip)
-	// Resolve the MAC address using ARP
+
 	hwAddr, err := c.Resolve(addrFromIp)
 	if err != nil {
-		log.Printf("[scanLANMacAddresses]::Error resolving %s: %v\n", ip, err)
+		log.Printf("[ScanMacAddress]::Error resolving IP:%s MAC:%s ERROR:%v\n", ip, hwAddr, err)
 	} else {
-		macAddresses = append(macAddresses, hwAddr)
+		fmt.Println(hwAddr)
 	}
-	// Give some time for ARP requests and responses
-	time.Sleep(2 * time.Second)
-	return macAddresses
+	return hwAddr.String()
 }
