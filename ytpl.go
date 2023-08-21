@@ -12,6 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
+const YTPL_PATH = "/opt/brewTV/ytpl"
+const YT_URL_TEMPLATE_URL = "https://www.youtube.com/watch?v="
+
 func extractVideoID(url string) string {
 	match := regexp.MustCompile(`\?v=([^&]+)`).FindStringSubmatch(url)
 	if len(match) >= 2 {
@@ -53,102 +56,6 @@ func streamVideo(conWrite http.ResponseWriter, videoPath string) {
 	defer videoFile.Close()
 	conWrite.Header().Set("Content-Type", "video/mp4")
 	io.Copy(conWrite, videoFile)
-}
-
-func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
-	html := `
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>BrewTV YTPL</title>
-		<style>
-			body {
-				font-family: Arial, sans-serif;
-				background-color: #000;
-				margin: 0;
-				padding: 0;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				min-height: 100vh;
-			}
-			.container {
-				background-color: #1a1a1a;
-				border-radius: 8px;
-				padding: 20px;
-				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
-				width: 400px;
-				text-align: center;
-			}
-			h1 {
-				margin-top: 0;
-				color: #fff;
-			}
-			form {
-				margin-top: 20px;
-			}
-			label {
-				display: block;
-				margin-bottom: 10px;
-				font-weight: bold;
-				color: #fff;
-			}
-			.center-input {
-				display: flex;
-				justify-content: center;
-				align-items: center;
-			}
-			input[type="text"] {
-				width: 100%;
-				padding: 10px;
-				border: none;
-				border-radius: 4px;
-				background-color: #333;
-				color: #fff;
-			}
-			button[type="submit"] {
-				background-color: #007bff;
-				color: #fff;
-				border: none;
-				border-radius: 4px;
-				padding: 12px 20px;
-				cursor: pointer;
-				margin-top: 10px;
-			}
-			button[type="submit"]:hover {
-				background-color: #0056b3;
-			}
-			.back-button {
-				margin-top: 20px;
-			}
-			.back-button a {
-				text-decoration: none;
-				color: #007bff;
-				font-weight: bold;
-			}
-			.back-button a:hover {
-				color: #0056b3;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="container">
-			<h1>BrewTV YTPL</h1>
-			<form action="/ytpl/play" method="post">
-				<label for="url">URL:</label>
-				<div class="center-input">
-					<input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=0123456789" required>
-				</div>
-				<button type="submit">Play</button>
-			</form>
-			<div class="back-button">
-				<a href="/">Back</a>
-			</div>
-		</div>
-	</body>
-	</html>	
-	`
-	RenderTemplate(w, "ytpl", html, make([]string, 0))
 }
 
 func YTPLPlayVideoHandler(w http.ResponseWriter, r *http.Request) {

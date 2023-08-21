@@ -9,89 +9,9 @@ import (
 	"strings"
 )
 
-func LibraryHandler(w http.ResponseWriter, r *http.Request) {
-	library, err := listFilesByType(LIBRARY_PATH, ACCEPTED_VIDEO_FORMAT)
-	if err != nil {
-		http.Error(w, "Failed to list library", http.StatusInternalServerError)
-		return
-	}
-
-	html := `
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>BrewTV Library</title>
-		<style>
-			body {
-				font-family: Arial, sans-serif;
-				background-color: #000;
-				margin: 0;
-				padding: 0;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				min-height: 100vh;
-			}
-			.container {
-				background-color: #1a1a1a;
-				border-radius: 8px;
-				padding: 20px;
-				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
-				width: 400px;
-				text-align: center;
-			}
-			h1 {
-				margin-top: 0;
-				color: #fff;
-			}
-			ul {
-				list-style: none;
-				padding: 0;
-				margin-top: 20px;
-			}
-			li {
-				margin-bottom: 10px;
-			}
-			a {
-				text-decoration: none;
-				color: #007bff;
-				font-weight: bold;
-				font-size: 18px; /* Adjust the font size */
-				margin-left: 10px; /* Add margin for spacing */
-			}
-			a:hover {
-				color: #0056b3;
-			}
-			.back-button {
-				margin-top: 20px;
-			}
-			.back-button a {
-				text-decoration: none;
-				color: #007bff;
-				font-weight: bold;
-			}
-			.back-button a:hover {
-				color: #0056b3;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="container">
-			<h1>BrewTV Library</h1>
-			<ul>
-				{{range .}}
-				<li><a href="/library/play?path={{.}}">{{.}}</a></li>
-				{{end}}
-			</ul>
-			<div class="back-button">
-				<a href="/">Back</a>
-			</div>
-		</div>
-	</body>
-	</html>	
-	`
-	RenderTemplate(w, "library", html, library)
-}
+const LIBRARY_PATH = "/opt/brewTV/library"
+const ACCEPTED_VIDEO_FORMAT = "mp4"
+const VIDEO_PLAY_PARAMETER = "path"
 
 func LibraryPlayHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	relative_video_path := getURLParameter(responseWriter, request, VIDEO_PLAY_PARAMETER)

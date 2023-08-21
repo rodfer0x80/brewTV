@@ -8,6 +8,16 @@
 *.so
 *.dylib
 
+# BrewTV
+allowed_mac_addresses.txt
+./allowed_mac_addresses.txt
+brewTV
+./brewTV
+main
+./main
+.env
+./.env
+
 # Log files
 *.log 
 ./*.log
