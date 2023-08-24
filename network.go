@@ -12,11 +12,14 @@ import (
 	"github.com/mdlayher/arp"
 )
 
+const (
+	PrivateIPRanges = "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+)
+
 func GetLANIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		log.Println("[GetLANIP]::Failed to get local IP:", err)
-		os.Exit(1)
+		log.Fatalf("[GetLANIP]::Failed to get local IP: %v", err)
 	}
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
@@ -27,77 +30,74 @@ func GetLANIP() string {
 	return ""
 }
 
-func getNetworkAdapterInterface() *net.Interface {
+func getLANConnectedInterface() *net.Interface {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		log.Println("[getNetworkAdapterInterface]::", err)
+		log.Println("[getLANConnectedInterface]::Error getting network interfaces:", err)
 		return nil
 	}
+
 	for _, intf := range ifaces {
-		// Skip loopback and down interfaces
-		if intf.Flags&net.FlagLoopback != 0 || intf.Flags&net.FlagUp == 0 {
+		if !isLANConnectedInterface(intf) {
 			continue
 		}
-		// Skip virtual interfaces and tunnels
-		if strings.HasPrefix(intf.Name, "vmnet") || strings.HasPrefix(intf.Name, "tun") {
-			continue
-		}
-		// Call the Addrs function to get the list of addresses
-		addrs, err := intf.Addrs()
-		if err != nil {
-			log.Println("[getNetworkAdapterInterface]::Error getting addresses for", intf.Name, ":", err)
-			continue
-		}
-		// Check if the interface has an IP in the private IP range
-		for _, addr := range addrs {
-			if ipnet, ok := addr.(*net.IPNet); ok && isPrivateIP(ipnet.IP) {
-				return &intf
-			}
-		}
+		return &intf
 	}
-	log.Println("[getNetworkAdapterInterface]::No LAN-connected network adapter found.")
+
+	log.Println("[getLANConnectedInterface]::No LAN-connected network adapter found.")
 	return nil
 }
 
-func isPrivateIP(ip net.IP) bool {
-	privateRanges := []net.IPNet{
-		{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)},
-		{IP: net.ParseIP("172.16.0.0"), Mask: net.CIDRMask(12, 32)},
-		{IP: net.ParseIP("192.168.0.0"), Mask: net.CIDRMask(16, 32)},
+func isLANConnectedInterface(intf net.Interface) bool {
+	if intf.Flags&net.FlagLoopback != 0 || intf.Flags&net.FlagUp == 0 {
+		return false
 	}
-	for _, pr := range privateRanges {
-		if pr.Contains(ip) {
+	if strings.HasPrefix(intf.Name, "vmnet") || strings.HasPrefix(intf.Name, "tun") {
+		return false
+	}
+	addrs, err := intf.Addrs()
+	if err != nil {
+		log.Printf("[isLANConnectedInterface]::Error getting addresses for %s: %v", intf.Name, err)
+		return false
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && isPrivateIP(ipnet.IP) {
 			return true
 		}
 	}
 	return false
 }
 
-func ScanMacAddress(r *http.Request) string {
-	if os.Geteuid() != 0 {
-		fmt.Println("[scanLANMacAddresses]::This program requires root privileges to access raw sockets.")
-		os.Exit(-1)
-	}
+func isPrivateIP(ip net.IP) bool {
+	_, privateRange, _ := net.ParseCIDR(PrivateIPRanges)
+	return privateRange.Contains(ip)
+}
 
-	iface := getNetworkAdapterInterface()
+func ResolveMACFromIP(remoteIP string) (string, error) {
+	iface := getLANConnectedInterface()
 	c, err := arp.Dial(iface)
 	if err != nil {
-		log.Println("[scanLANMacAddresses]::Error creating ARP client:", err)
-		return ""
+		log.Printf("[ResolveMACFromIP]::Error dialing ARP: %v", err)
+		return "", err
 	}
 	defer c.Close()
 
-	remoteIP := r.RemoteAddr
 	addr, _ := netip.ParseAddr(remoteIP)
 	s := addr.AsSlice()
 	ip := net.IP(s)
-	addrFromIp, _ := netip.AddrFromSlice(ip)
+	addrFromIP, _ := netip.AddrFromSlice(ip)
 
-	hwAddr, err := c.Resolve(addrFromIp)
+	macAdress, err := c.Resolve(addrFromIP)
 	if err != nil {
-		log.Printf("[ScanMacAddress]::Error resolving IP:%s MAC:%s ERROR:%v\n", ip, hwAddr, err)
-	} else {
-		fmt.Println(hwAddr)
+		log.Printf("[ResolveMACFromIP]::Error resolving IP: %v", err)
+		return "", err
 	}
-	return hwAddr.String()
+	return macAdress.String(), nil
+}
+
+func ScanMacAddress(r *http.Request) (string, error) {
+	if os.Geteuid() != 0 {
+		return "", fmt.Errorf("this program requires root privileges to access raw sockets")
+	}
+	return ResolveMACFromIP(strings.Split(r.RemoteAddr, ":")[0])
 }

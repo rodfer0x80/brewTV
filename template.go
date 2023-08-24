@@ -13,7 +13,6 @@ func renderTemplate(w http.ResponseWriter, name string, html string, data []stri
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	ScanMacAddress(r)
 	html := `
 	<!DOCTYPE html>
 	<html>
@@ -21,7 +20,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		<title>BrewTV</title>
 		<style>
 			body {
-				font-family: Arial, sans-serif;
+				font-family: 'Courier New', monospace;
 				background-color: #000;
 				margin: 0;
 				padding: 0;
@@ -35,39 +34,45 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 				border-radius: 8px;
 				padding: 20px;
 				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
-				width: 400px;
+				max-width: 400px;
+				width: 90%;
 				text-align: center;
 			}
 			h1 {
 				margin-top: 0;
-				color: #fff;
+				color: #0f0;
+				font-size: 2em;
 			}
 			ul {
 				list-style: none;
 				padding: 0;
-				margin-top: 20px;
+				margin-top: 2rem;
 			}
 			li {
-				margin-bottom: 10px;
+				margin-bottom: 1rem;
 			}
 			a {
 				text-decoration: none;
-				color: #007bff;
+				color: #0f0;
 				font-weight: bold;
-				font-size: 18px; /* Adjust the font size */
-				margin-left: 10px; /* Add margin for spacing */
+				font-size: 1.2em;
+				margin-left: 1rem;
 			}
 			a:hover {
-				color: #0056b3;
+				color: #0a0;
+			}
+			hr {
+				color: #0f0;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<h1>BrewTV</h1>
+			<h1>&lt; BrewTV &gt;</h1>
 			<ul>
-				<li><a href="/library">Library</a></li>
-				<li><a href="/ytpl">YouTube</a></li>
+				<li><a href="/library">[ Library ]</a></li>
+				<br>
+				<li><a href="/ytpl">[ YouTube ]</a></li>
 			</ul>
 		</div>
 	</body>
@@ -90,7 +95,7 @@ func LibraryHandler(w http.ResponseWriter, r *http.Request) {
 		<title>BrewTV Library</title>
 		<style>
 			body {
-				font-family: Arial, sans-serif;
+				font-family: 'Courier New', monospace;
 				background-color: #000;
 				margin: 0;
 				padding: 0;
@@ -104,12 +109,14 @@ func LibraryHandler(w http.ResponseWriter, r *http.Request) {
 				border-radius: 8px;
 				padding: 20px;
 				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
-				width: 400px;
+				max-width: 400px;
+				width: 90%;
 				text-align: center;
 			}
 			h1 {
 				margin-top: 0;
-				color: #fff;
+				color: #0f0;
+				font-size: 2em;
 			}
 			ul {
 				list-style: none;
@@ -121,37 +128,38 @@ func LibraryHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			a {
 				text-decoration: none;
-				color: #007bff;
+				color: #0f0;
 				font-weight: bold;
-				font-size: 18px; /* Adjust the font size */
-				margin-left: 10px; /* Add margin for spacing */
+				font-size: 1.2em;
+				margin-left: 10px;
 			}
 			a:hover {
-				color: #0056b3;
+				color: #0a0;
 			}
 			.back-button {
 				margin-top: 20px;
 			}
 			.back-button a {
 				text-decoration: none;
-				color: #007bff;
+				color: #0f0;
 				font-weight: bold;
+				font-size: 1.2em;
 			}
 			.back-button a:hover {
-				color: #0056b3;
+				color: #0a0;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<h1>BrewTV Library</h1>
+			<h1>&lt; BrewTV Library &gt;</h1>
 			<ul>
 				{{range .}}
-				<li><a href="/library/play?path={{.}}">{{.}}</a></li>
+				<li><a href="/library/play?path={{.}}">[ {{.}} ]</a></li>
 				{{end}}
 			</ul>
 			<div class="back-button">
-				<a href="/">Back</a>
+				<a href="/">[ Back ]</a>
 			</div>
 		</div>
 	</body>
@@ -168,7 +176,7 @@ func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
 		<title>BrewTV YTPL</title>
 		<style>
 			body {
-				font-family: Arial, sans-serif;
+				font-family: 'Courier New', monospace;
 				background-color: #000;
 				margin: 0;
 				padding: 0;
@@ -182,12 +190,14 @@ func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
 				border-radius: 8px;
 				padding: 20px;
 				box-shadow: 0px 2px 10px rgba(255, 255, 255, 0.1);
-				width: 400px;
+				max-width: 400px;
+				width: 90%;
 				text-align: center;
 			}
 			h1 {
 				margin-top: 0;
-				color: #fff;
+				color: #0f0;
+				font-size: 2em;
 			}
 			form {
 				margin-top: 20px;
@@ -196,7 +206,7 @@ func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
 				display: block;
 				margin-bottom: 10px;
 				font-weight: bold;
-				color: #fff;
+				color: #0f0;
 			}
 			.center-input {
 				display: flex;
@@ -209,11 +219,11 @@ func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
 				border: none;
 				border-radius: 4px;
 				background-color: #333;
-				color: #fff;
+				color: #0f0;
 			}
 			button[type="submit"] {
-				background-color: #007bff;
-				color: #fff;
+				background-color: #0f0;
+				color: #000;
 				border: none;
 				border-radius: 4px;
 				padding: 12px 20px;
@@ -221,33 +231,33 @@ func YTPLVideoHandler(w http.ResponseWriter, request *http.Request) {
 				margin-top: 10px;
 			}
 			button[type="submit"]:hover {
-				background-color: #0056b3;
+				background-color: #0a0;
 			}
 			.back-button {
 				margin-top: 20px;
 			}
 			.back-button a {
 				text-decoration: none;
-				color: #007bff;
+				color: #0f0;
 				font-weight: bold;
 			}
 			.back-button a:hover {
-				color: #0056b3;
+				color: #0a0;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<h1>BrewTV YTPL</h1>
+			<h1>&lt; BrewTV YTPL &gt;</h1>
 			<form action="/ytpl/play" method="post">
 				<label for="url">URL:</label>
 				<div class="center-input">
-					<input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=0123456789" required>
+					<input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=$VIDEO_ID$" required>
 				</div>
-				<button type="submit">Play</button>
+				<button type="submit">[ Play ]</button>
 			</form>
 			<div class="back-button">
-				<a href="/">Back</a>
+				<a href="/">[ Back ]</a>
 			</div>
 		</div>
 	</body>

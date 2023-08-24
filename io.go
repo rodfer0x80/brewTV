@@ -2,15 +2,13 @@ package main
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"strings"
 )
 
 func CreateFileIfNotExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_, err := os.Create(path)
-		if err != nil {
+		if err := os.WriteFile(path, nil, 0666); err != nil {
 			return err
 		}
 	}
@@ -19,42 +17,42 @@ func CreateFileIfNotExists(path string) error {
 
 func CreateDirIfNotExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err = os.MkdirAll(path, 0777)
-		if err != nil {
+		if err := os.Mkdir(path, 0666); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func AppendToFile(path string, content string) error {
-	CreateFileIfNotExists(path)
+func AppendToFile(path, content string) error {
+	if err := CreateFileIfNotExists(path); err != nil {
+		return err
+	}
+
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Printf("[AppendToFile]::Error opening file %s", path)
 		return err
 	}
 	defer file.Close()
+
 	_, err = file.WriteString(content)
-	if err != nil {
-		log.Printf("[AppendToFile]::Error writting to file %s", path)
-		return err
-	}
-	return nil
+	return err
 }
 
 func ReadlinesFromFile(path string) ([]string, error) {
-	var data []string
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
+
+	var data []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		data = append(data, line)
 	}
+
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}

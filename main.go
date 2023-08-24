@@ -23,11 +23,16 @@ func main() {
 
 	startFlag := flag.Bool("start", false, "Run the server")
 	setupFlag := flag.Bool("setup", false, "Add allowed MAC address")
+	convertFlag := flag.Bool("convert", false, "Convert library to mp4")
 
 	flag.Parse()
 
 	if *startFlag {
 		StartServer()
+	}
+
+	if *convertFlag {
+		ConvertDirectory(LIBRARY_PATH)
 	}
 
 	if *setupFlag {

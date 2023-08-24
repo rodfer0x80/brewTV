@@ -7,23 +7,55 @@ import (
 
 const ALLOWED_MAC_ADDRESSES_PATH = "./allowed_mac_addresses.txt"
 
-func AddToMacAddressAllowlist(mac_address string) error {
-	return AppendToFile(ALLOWED_MAC_ADDRESSES_PATH, mac_address)
+func AddToMacAddressAllowlist(macAddress string) error {
+	if ip := net.ParseIP(macAddress); ip != nil {
+		macFromIP, err := ResolveMACFromIP(ip.String())
+		if err != nil {
+			log.Printf("[AddToMacAddressAllowlist]::Error resolving MAC address from IP: %v\n", err)
+			return err
+		}
+
+		macAddress = macFromIP
+	}
+
+	existingMACAddresses, err := ReadAllowedMacAddresses(ALLOWED_MAC_ADDRESSES_PATH)
+	if err != nil {
+		log.Printf("[AddToMacAddressAllowlist]::Error reading allowed MAC addresses: %v\n", err)
+		return err
+	}
+
+	for _, existingMAC := range existingMACAddresses {
+		if existingMAC.String() == macAddress {
+			log.Printf("MAC address already in allowed list %s\n", macAddress)
+			return nil
+		}
+	}
+
+	if err := AppendToFile(ALLOWED_MAC_ADDRESSES_PATH, macAddress); err != nil {
+		log.Printf("[AddToMacAddressAllowlist]::Error appending MAC address: %v\n", err)
+		return err
+	}
+
+	return nil
 }
 
 func ReadAllowedMacAddresses(filename string) ([]net.HardwareAddr, error) {
-	var mac_addresses []net.HardwareAddr
-	str_mac_addresses, err := ReadlinesFromFile(ALLOWED_MAC_ADDRESSES_PATH)
+	var macAddresses []net.HardwareAddr
+
+	strMacAddresses, err := ReadlinesFromFile(filename)
 	if err != nil {
-		log.Printf("[ReadAllowedMacAddresses]::Error opening file: %s\n", err)
+		log.Printf("[ReadAllowedMacAddresses]::Error opening file: %v\n", err)
+		return nil, err
 	}
-	for _, str_mac_address := range str_mac_addresses {
-		mac_address, err := net.ParseMAC(str_mac_address)
+
+	for _, strMacAddress := range strMacAddresses {
+		macAddress, err := net.ParseMAC(strMacAddress)
 		if err != nil {
-			log.Printf("[ReadAllowedMacAddresses]::Invalid MAC address: %s\n", mac_address)
+			log.Printf("[ReadAllowedMacAddresses]::Invalid MAC address: %s\n", strMacAddress)
 			continue
 		}
-		mac_addresses = append(mac_addresses, mac_address)
+		macAddresses = append(macAddresses, macAddress)
 	}
-	return mac_addresses, nil
+
+	return macAddresses, nil
 }

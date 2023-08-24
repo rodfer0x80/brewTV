@@ -7,25 +7,40 @@ import (
 	"net/http"
 )
 
+const (
+	DefaultPort = 80
+	DebugPort   = 8080
+)
+
 func StartServer() {
-	tcp_addr := &net.TCPAddr{
-		IP:   net.ParseIP(GetLANIP()),
-		Port: 80,
-	}
-	if DEBUG == 1 {
-		tcp_addr = &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 8080,
-		}
-	}
+	tcpAddr := getServerTCPAddr()
 	loadConfig()
+
 	setupServer()
-	runServer(*tcp_addr)
+
+	runServer(tcpAddr)
 }
 
-func runServer(tcp_addr net.TCPAddr) {
-	log.Printf("[RunServer]::Running server: %s\n", tcp_addr.String())
-	err := http.ListenAndServe(tcp_addr.String(), nil)
+func getServerTCPAddr() net.TCPAddr {
+	ip := net.ParseIP(GetLANIP())
+	port := DefaultPort
+
+	if DEBUG == 1 {
+		ip = net.ParseIP("127.0.0.1")
+		port = DebugPort
+	}
+
+	return net.TCPAddr{
+		IP:   ip,
+		Port: port,
+	}
+}
+
+func runServer(tcpAddr net.TCPAddr) {
+	serverAddr := tcpAddr.String()
+	log.Printf("[RunServer]::Running server: %s\n", serverAddr)
+
+	err := http.ListenAndServe(serverAddr, nil)
 	if err != nil {
 		log.Println("[RunServer]::Error starting server:", err)
 	}
@@ -43,12 +58,13 @@ func setupServer() {
 }
 
 func loadConfig() {
-	allowed_mac_addrs, err := ReadAllowedMacAddresses(ALLOWED_MAC_ADDRESSES_PATH)
+	allowedMacAddrs, err := ReadAllowedMacAddresses(ALLOWED_MAC_ADDRESSES_PATH)
 	if err != nil {
-		log.Println("[RunServer]::Error loading allowed MAC address list")
+		log.Println("[LoadConfig]::Error loading allowed MAC address list:", err)
 	}
+
 	fmt.Println("List of allowed MAC addresses:")
-	for _, mac := range allowed_mac_addrs {
+	for _, mac := range allowedMacAddrs {
 		fmt.Println(mac.String())
 	}
 }
