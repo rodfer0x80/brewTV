@@ -45,8 +45,8 @@ mkdir -p original
 mv * original/
 for file in original/*; do
     extension="${file##*.}"
-    if [ "$extension" != "mp4" ]; then
-        output_file="${file%.*}.mp4"
+    if [ "$extension" != "mp3" ]; then
+        output_file="${file%.*}.mp3"
         ffmpeg -i "$file" "$output_file"
         mv "$output_file" .
     fi

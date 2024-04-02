@@ -10,21 +10,32 @@ import (
 )
 
 const LIBRARY_PATH = "/opt/brewTV/library"
-const ACCEPTED_VIDEO_FORMAT = "mp4"
+const TV_PATH = "/opt/brewTV/library/tv"
+const MUSIC_PATH = "/opt/brewTV/library/music"
+const ACCEPTED_TV_FORMAT = "mp4"
+const ACCEPTED_MUSIC_FORMAT = "mp3"
 const VIDEO_PLAY_PARAMETER = "path"
 
-func LibraryPlayHandler(responseWriter http.ResponseWriter, request *http.Request) {
+func TVPlayHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	relative_video_path := getURLParameter(responseWriter, request, VIDEO_PLAY_PARAMETER)
 	if relative_video_path == "" {
 		return
 	}
-	playVideo(responseWriter, request, relative_video_path)
+	playVideo(responseWriter, request, TV_PATH, relative_video_path)
 }
 
-func playVideo(responseWriter http.ResponseWriter, request *http.Request, relative_video_path string) {
-	video_path := filepath.Join(LIBRARY_PATH, relative_video_path)
+func MusicPlayHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	relative_video_path := getURLParameter(responseWriter, request, VIDEO_PLAY_PARAMETER)
+	if relative_video_path == "" {
+		return
+	}
+	playVideo(responseWriter, request, MUSIC_PATH, relative_video_path)
+}
+
+func playVideo(responseWriter http.ResponseWriter, request *http.Request, dir_path string, relative_video_path string) {
+	video_path := filepath.Join(dir_path, relative_video_path)
 	if fileExists(video_path) {
-		serveVideo(responseWriter, request, video_path, ACCEPTED_VIDEO_FORMAT)
+		serveVideo(responseWriter, request, video_path, ACCEPTED_TV_FORMAT)
 		return
 	}
 	http.NotFound(responseWriter, request)

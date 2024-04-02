@@ -1,4 +1,4 @@
 #!/bin/sh
 go build .
-go run ./brewTV -start &
+./brewTV -start &
 tail -f ./brewTV.log

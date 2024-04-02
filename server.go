@@ -15,7 +15,7 @@ func StartServer() {
 	tcpAddr := getServerTCPAddr()
 	loadConfig()
 
-  setupServer()
+	setupServer()
 
 	runServer(tcpAddr)
 }
@@ -48,10 +48,14 @@ func runServer(tcpAddr net.TCPAddr) {
 func setupServer() {
 	CreateDirIfNotExists(LIBRARY_PATH)
 	CreateDirIfNotExists(YTPL_PATH)
+	CreateDirIfNotExists(MUSIC_PATH)
+	CreateDirIfNotExists(TV_PATH)
 
 	http.HandleFunc("/", IndexHandler)
-	http.HandleFunc("/library", LibraryHandler)
-	http.HandleFunc("/library/play", LibraryPlayHandler)
+	http.HandleFunc("/tv", TVHandler)
+	http.HandleFunc("/tv/play", TVPlayHandler)
+	http.HandleFunc("/music", MusicHandler)
+	http.HandleFunc("/music/play", MusicPlayHandler)
 	http.HandleFunc("/ytpl", YTPLVideoHandler)
 	http.HandleFunc("/ytpl/play", YTPLPlayVideoHandler)
 }
