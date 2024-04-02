@@ -5,13 +5,13 @@ import (
 	"net"
 )
 
-const ALLOWED_MAC_ADDRESSES_PATH = "./allowed_mac_addresses.txt"
+const ALLOWED_MAC_ADDRESSES_PATH = "/opt/brewTV/allowed_mac_addresses.txt"
 
 func AddToMacAddressAllowlist(macAddress string) error {
 	if ip := net.ParseIP(macAddress); ip != nil {
 		macFromIP, err := ResolveMACFromIP(ip.String())
 		if err != nil {
-			log.Printf("[AddToMacAddressAllowlist]::Error resolving MAC address from IP: %v\n", err)
+      log.Printf("[AddToMacAddressAllowlist]::Error: Resolving MAC address from IP: %v\n", err)
 			return err
 		}
 
@@ -20,7 +20,7 @@ func AddToMacAddressAllowlist(macAddress string) error {
 
 	existingMACAddresses, err := ReadAllowedMacAddresses(ALLOWED_MAC_ADDRESSES_PATH)
 	if err != nil {
-		log.Printf("[AddToMacAddressAllowlist]::Error reading allowed MAC addresses: %v\n", err)
+    log.Printf("[AddToMacAddressAllowlist]::Warning: Reading allowed MAC addresses: %v\n", err)
 		return err
 	}
 
@@ -32,7 +32,7 @@ func AddToMacAddressAllowlist(macAddress string) error {
 	}
 
 	if err := AppendToFile(ALLOWED_MAC_ADDRESSES_PATH, macAddress); err != nil {
-		log.Printf("[AddToMacAddressAllowlist]::Error appending MAC address: %v\n", err)
+    log.Printf("[AddToMacAddressAllowlist]::Error: Appending MAC address: %v\n", err)
 		return err
 	}
 
@@ -44,14 +44,14 @@ func ReadAllowedMacAddresses(filename string) ([]net.HardwareAddr, error) {
 
 	strMacAddresses, err := ReadlinesFromFile(filename)
 	if err != nil {
-		log.Printf("[ReadAllowedMacAddresses]::Error opening file: %v\n", err)
+    log.Printf("[ReadAllowedMacAddresses]::Warning: Opening file: %v\n", err)
 		return nil, err
 	}
 
 	for _, strMacAddress := range strMacAddresses {
 		macAddress, err := net.ParseMAC(strMacAddress)
 		if err != nil {
-			log.Printf("[ReadAllowedMacAddresses]::Invalid MAC address: %s\n", strMacAddress)
+      log.Printf("[ReadAllowedMacAddresses]::Error: Invalid MAC address: %s\n", strMacAddress)
 			continue
 		}
 		macAddresses = append(macAddresses, macAddress)

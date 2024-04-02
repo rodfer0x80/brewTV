@@ -39,7 +39,6 @@ func getURLParameter(w http.ResponseWriter, r *http.Request, parameter_name stri
 
 func listFilesByType(directoryPath string, file_format string) ([]string, error) {
 	files := []string{}
-	print(directoryPath)
 	err := filepath.Walk(directoryPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

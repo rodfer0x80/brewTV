@@ -16,6 +16,7 @@ import (
 const (
 	YTPL_PATH           = "/opt/brewTV/ytpl"
 	YT_URL_TEMPLATE_URL = "https://www.youtube.com/watch?v="
+
 )
 
 func extractVideoID(url string) string {
@@ -23,7 +24,8 @@ func extractVideoID(url string) string {
 	if len(match) >= 2 {
 		return match[1]
 	}
-	return ""
+  
+  return url
 }
 
 func getUUIDVideoPath(directoryPath string) string {
@@ -43,7 +45,7 @@ func downloadVideo(url string) (string, error) {
 	videoPath := getUUIDVideoPath(YTPL_PATH)
 	videoID := extractVideoID(url)
 	if videoID == "" {
-		return "", fmt.Errorf("invalid video URL")
+    return "", fmt.Errorf("::downloadVideo::Error: Invalid video URL")
 	}
 	if err := ytdlVideoExec(videoPath, videoID); err != nil {
 		return "", err
@@ -60,14 +62,14 @@ func getVideoURL(request *http.Request) string {
 
 func cleanupDownload(videoPath string) {
 	if err := os.Remove(videoPath); err != nil {
-		log.Printf("Error cleaning up video file: %v\n", err)
+    log.Printf("::cleanupDownload::Error: cleaning up video file: %v\n", err)
 	}
 }
 
 func streamVideo(responseWriter http.ResponseWriter, videoPath string) {
 	videoFile, err := os.Open(videoPath)
 	if err != nil {
-		log.Printf("Error opening video file: %v\n", err)
+    log.Printf("::streamVideo::Error: Opening video file: %v\n", err)
 		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -76,7 +78,7 @@ func streamVideo(responseWriter http.ResponseWriter, videoPath string) {
 	responseWriter.Header().Set("Content-Type", "video/mp4")
 	_, err = io.Copy(responseWriter, videoFile)
 	if err != nil {
-		log.Printf("Error streaming video: %v\n", err)
+    log.Printf("::streamVideo::Error: Streaming video: %v\n", err)
 	}
 }
 

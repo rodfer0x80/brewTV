@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -16,7 +15,7 @@ func StartServer() {
 	tcpAddr := getServerTCPAddr()
 	loadConfig()
 
-	setupServer()
+  setupServer()
 
 	runServer(tcpAddr)
 }
@@ -63,8 +62,8 @@ func loadConfig() {
 		log.Println("[LoadConfig]::Error loading allowed MAC address list:", err)
 	}
 
-	fmt.Println("List of allowed MAC addresses:")
+	log.Println("List of allowed MAC addresses:")
 	for _, mac := range allowedMacAddrs {
-		fmt.Println(mac.String())
+		log.Println(mac.String())
 	}
 }
