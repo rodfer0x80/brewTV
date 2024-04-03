@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const DEBUG = 1
+const DEBUG = 0
 
 const LOGFILE_PATH = "./brewTV.log"
 
