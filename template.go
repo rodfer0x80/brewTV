@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"text/template"
 )
@@ -13,7 +14,33 @@ func renderTemplate(w http.ResponseWriter, name string, html string, data []stri
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	html := `
+//  connMAC, err := ScanMacAddress(r)
+//	if err != nil {
+//		log.Println("Error [ScanMacAddress]:", err)
+//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+//		return
+//	}
+
+//	var checkFlag bool
+//	allowedMACs, err := ReadAllowedMacAddresses(ALLOWED_MAC_ADDRESSES_PATH)
+//	if err != nil {
+//		log.Println("Error [ReadAllowedMacAddresses]:", err)
+//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+//		return
+//	}
+
+//	for _, mac := range allowedMACs {
+//		if mac.String() == connMAC {
+//			checkFlag = true
+//			break
+//		}
+//	}
+//	if !checkFlag {
+//		log.Println("Invalid user MAC")
+//		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+//		return
+//	}
+  html := `
 	<!DOCTYPE html>
 	<html>
 	<head>
