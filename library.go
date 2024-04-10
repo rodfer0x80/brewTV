@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
-	"net/http"
+  "log"
+  "compress/gzip"
+  "net/http"
 	"os"
+  "time"
+  "strconv"
 	"path/filepath"
 	"strings"
 )
@@ -15,6 +19,7 @@ const MUSIC_PATH = "/opt/brewTV/library/music"
 const ACCEPTED_TV_FORMAT = "mp4"
 const ACCEPTED_MUSIC_FORMAT = "mp3"
 const VIDEO_PLAY_PARAMETER = "path"
+const CACHE_MAX_AGE = 360000 // 100h
 
 func TVPlayHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	relative_video_path := getURLParameter(responseWriter, request, VIDEO_PLAY_PARAMETER)
@@ -69,19 +74,53 @@ func listFilesByType(directoryPath string, file_format string) ([]string, error)
 }
 
 func serveVideo(w http.ResponseWriter, r *http.Request, file_path string, file_format string) {
-	video_handle, err := os.Open(file_path)
-	if err != nil {
-		http.Error(w, "Failed to open the video file", http.StatusInternalServerError)
-		return
-	}
-	defer video_handle.Close()
+    videoHandle, err := os.Open(file_path)
+    if err != nil {
+        http.Error(w, "Failed to open the video file", http.StatusInternalServerError)
+        log.Fatal("Failed to open video file")
+        return
+    }
+    defer videoHandle.Close()
 
-	w.Header().Set("Content-Type", fmt.Sprintf("video/%s", file_format))
-	_, err = io.Copy(w, video_handle)
-	if err != nil {
-		http.Error(w, "Failed to stream the video content", http.StatusInternalServerError)
-		return
-	}
+    fileStat, err := videoHandle.Stat()
+    if err != nil {
+        http.Error(w, "Failed to get video file information", http.StatusInternalServerError)
+        log.Fatal("Failed to get video file information")
+        return
+    }
+
+    w.Header().Set("Content-Type", "video/"+file_format)
+
+    w.Header().Set("Cache-Control", "max-age="+strconv.Itoa(CACHE_MAX_AGE))
+    w.Header().Set("Expires", time.Now().Add(time.Duration(CACHE_MAX_AGE)*time.Second).Format(http.TimeFormat))
+
+    w.Header().Set("Content-Length", strconv.FormatInt(fileStat.Size(), 10))
+
+    _, err = io.Copy(w, videoHandle)
+    if err != nil {
+        http.Error(w, "Failed to stream the video content", http.StatusInternalServerError)
+        log.Fatal("Failed to stream video content")
+        return
+    }
+}
+
+
+func serveCompressedContent(w http.ResponseWriter, r *http.Request, content []byte, modTime time.Time, content_type string) {
+    w.Header().Set("Content-Type", "video/"+content_type)
+    w.Header().Set("Cache-Control", "max-age=3600") // Cache for 1 hour
+
+    // Check if client supports gzip
+    if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+        w.Header().Set("Content-Encoding", "gzip")
+        gz := gzip.NewWriter(w)
+        defer gz.Close()
+        gz.Write(content)
+    } else {
+        // If client doesn't support gzip, serve uncompressed content
+        w.Write(content)
+    }
+
+    w.WriteHeader(http.StatusOK)
 }
 
 func fileExists(filePath string) bool {
